@@ -1,15 +1,16 @@
-import React, { Component } from 'react';
+import React, {ChangeEvent, Component} from 'react';
 import {Card} from "./Card";
 
 interface MyState {
     initialDeck: number[],
     deck: number[],
+    grave: number[],
     hand: number[],
     draw: number,
+    checkWinInput: string,
 }
 
 export class Deck extends Component<{}, MyState> {
-
     // The tick function sets the current state. TypeScript will let us know
     // which ones we are allowed to set.
     constructor(props: Readonly<{}>) {
@@ -28,8 +29,10 @@ export class Deck extends Component<{}, MyState> {
         this.state = {
             initialDeck: initialDeck,
             deck: [],
+            grave: [],
             hand: [],
             draw: 99, //99=無牌
+            checkWinInput: '',
         }
     }
     shuffle(array: number[]) {
@@ -57,6 +60,7 @@ export class Deck extends Component<{}, MyState> {
         hand.sort(((a, b) => a - b));
         this.setState( {
             deck: deck,
+            grave: [],
             hand: hand,
         }, this.drawCard);
     }
@@ -74,22 +78,110 @@ export class Deck extends Component<{}, MyState> {
 
     handleCardClick(card: number) {
         if (card === this.state.draw) {
-            this.setState( {
+            this.setState( (prevState) => ({
                 draw: 99,
-            }, this.drawCard);
+                grave: [...prevState.grave, card],
+            }), this.drawCard);
         } else {
             let hand = this.state.hand;
             let index = hand.findIndex(element => element === card);
             hand[index] = this.state.draw;
             hand.sort(((a, b) => a - b));
-            this.setState({
+            this.setState((prevState) => ({
                 draw: 99,
                 hand: hand,
-            }, this.drawCard);
+                grave: [...prevState.grave, card],
+            }), this.drawCard);
         }
-
     }
 
+    handleGraveClick(card: number) {
+        console.log(card);
+    }
+
+    checkWin(event: ChangeEvent<HTMLInputElement>) {
+        let checkWinInput = event.target.value;
+        let hand: number[] = [];
+        this.setState({checkWinInput: checkWinInput});
+        for (let x = 0; x < checkWinInput.length; x++) {
+            hand.push(parseInt(checkWinInput[x]))
+        }
+        console.time('loop');
+        console.log(this.checkWinPair(hand));
+        console.timeEnd('loop');
+    }
+
+    checkWinPair(hand: number[]): boolean {
+        if (hand.length > 1) {
+            let tmpHand = [...hand];
+            for (let x = 0; x < tmpHand.length; x++) {
+                if (tmpHand[x + 1] - tmpHand[x] === 0) {
+                    tmpHand.splice(x, 2);
+                    if (this.checkThree(tmpHand)) {return true}
+                    if (this.checkSeries(tmpHand)) {return true}
+                    if (this.checkSeries2(tmpHand)) {return true}
+                }
+                tmpHand = [...hand];
+            }
+        }
+        return false;
+    }
+
+    checkThree(hand: number[]): boolean {
+        if (hand.length > 2) {
+            let tmpHand = [...hand];
+            for (let x = 0; x < tmpHand.length; x++) {
+                if (tmpHand[x + 1] - tmpHand[x] === 0 && tmpHand[x + 2] - tmpHand[x + 1] === 0) {
+                    tmpHand.splice(x, 3);
+                    if (this.checkThree(tmpHand)) {return true}
+                    if (this.checkSeries(tmpHand)) {return true}
+                    if (this.checkSeries2(tmpHand)) {return true}
+                }
+                tmpHand = [...hand];
+            }
+        } else if (hand.length === 0) {
+            return true;
+        }
+        return false;
+    }
+
+    checkSeries(hand: number[]): boolean {
+        if (hand.length > 2) {
+            let tmpHand = [...hand];
+            for (let x = 0; x < tmpHand.length; x++) {
+                if (tmpHand[x + 1] - tmpHand[x] === 1 && tmpHand[x + 2] - tmpHand[x + 1] === 1) {
+                    tmpHand.splice(x, 3);
+                    if (this.checkThree(tmpHand)) {return true}
+                    if (this.checkSeries(tmpHand)) {return true}
+                    if (this.checkSeries2(tmpHand)) {return true}
+                }
+                tmpHand = [...hand];
+            }
+        } else if (hand.length === 0) {
+            return true;
+        }
+        return false;
+    }
+
+    checkSeries2(hand: number[]): boolean {
+        if (hand.length > 2) {
+            let tmpHand = [...hand];
+            for (let x = 0; x < tmpHand.length; x++) {
+                if (tmpHand[x + 2] - tmpHand[x] === 1 && tmpHand[x + 4] - tmpHand[x + 2] === 1) {
+                    tmpHand.splice(x + 4, 1);
+                    tmpHand.splice(x + 2, 1);
+                    tmpHand.splice(x, 1);
+                    if (this.checkThree(tmpHand)) {return true}
+                    if (this.checkSeries(tmpHand)) {return true}
+                    if (this.checkSeries2(tmpHand)) {return true}
+                }
+                tmpHand = [...hand];
+            }
+        } else if (hand.length === 0) {
+            return true;
+        }
+        return false;
+    }
     // After the component did mount, we set the state each second.
     componentDidMount() {
         this.initial();
@@ -115,7 +207,17 @@ export class Deck extends Component<{}, MyState> {
                         <div></div>
                 }
 
+                <div>墳場</div>
+                <div>
+                    {this.state.grave.map((card, index) => {
+                        return <Card key={index} card={card} onCardClick={this.handleGraveClick.bind(this, card)} />
+                    })}
+                </div>
+
                 <div><button onClick={() => this.initial()}>Reset</button></div>
+
+                <input type="text" onChange={event => this.checkWin(event)}/>
+                <div>{this.state.checkWinInput}</div>
             </div>
         )}
 }
