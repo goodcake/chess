@@ -11,6 +11,7 @@ interface MyState {
     win: boolean,
 }
 
+
 export class Deck extends Component<{}, MyState> {
     // The tick function sets the current state. TypeScript will let us know
     // which ones we are allowed to set.
@@ -36,7 +37,6 @@ export class Deck extends Component<{}, MyState> {
             checkWinInput: '',
             win: false,
         };
-
         this.winTester();
     }
     shuffle(array: number[]) {
@@ -118,7 +118,7 @@ export class Deck extends Component<{}, MyState> {
         payloads.forEach(item => {
             console.log(item.result, this.checkWinPair(item.payload));
         });
-    };
+    }
 
     checkWin(checkWinInput: string) {
         let hand: number[] = [];
@@ -144,8 +144,8 @@ export class Deck extends Component<{}, MyState> {
                     if (this.checkThree(tmpHand)) {return true}
                     if (this.checkSeries(tmpHand)) {return true}
                     if (this.checkSeries2(tmpHand)) {return true}
+                    tmpHand = [...hand];
                 }
-                tmpHand = [...hand];
             }
         }
         return false;
@@ -160,8 +160,8 @@ export class Deck extends Component<{}, MyState> {
                     if (this.checkThree(tmpHand)) {return true}
                     if (this.checkSeries(tmpHand)) {return true}
                     if (this.checkSeries2(tmpHand)) {return true}
+                    tmpHand = [...hand];
                 }
-                tmpHand = [...hand];
             }
         } else if (hand.length === 0) {
             return true;
@@ -180,8 +180,8 @@ export class Deck extends Component<{}, MyState> {
                     if (this.checkThree(tmpHand)) {return true}
                     if (this.checkSeries(tmpHand)) {return true}
                     if (this.checkSeries2(tmpHand)) {return true}
+                    tmpHand = [...hand];
                 }
-                tmpHand = [...hand];
             }
         } else if (hand.length === 0) {
             return true;
@@ -205,8 +205,8 @@ export class Deck extends Component<{}, MyState> {
                     if (this.checkThree(tmpHand)) {return true}
                     if (this.checkSeries(tmpHand)) {return true}
                     if (this.checkSeries2(tmpHand)) {return true}
+                    tmpHand = [...hand];
                 }
-                tmpHand = [...hand];
             }
         } else if (hand.length === 0) {
             return true;

@@ -1,5 +1,4 @@
 import React, { Component } from 'react';
-
 interface MyProps {
     card: number,
     onCardClick: Function,
