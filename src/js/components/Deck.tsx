@@ -8,6 +8,7 @@ interface MyState {
     hand: number[],
     draw: number,
     checkWinInput: string,
+    win: boolean,
 }
 
 export class Deck extends Component<{}, MyState> {
@@ -33,7 +34,10 @@ export class Deck extends Component<{}, MyState> {
             hand: [],
             draw: 99, //99=無牌
             checkWinInput: '',
-        }
+            win: false,
+        };
+
+        this.winTester();
     }
     shuffle(array: number[]) {
         for (let i = array.length - 1; i > 0; i--) {
@@ -99,15 +103,35 @@ export class Deck extends Component<{}, MyState> {
         console.log(card);
     }
 
-    checkWin(event: ChangeEvent<HTMLInputElement>) {
-        let checkWinInput = event.target.value;
+    winTester() {
+        const payloads: {result: boolean, payload: number[]}[] = [
+            {result: true, payload: [1,1,1,2,2,2,3,3]},
+            {result: true, payload: [1,1,1,1,2,2,2,2,3,3,3]},
+            {result: true, payload: [2,3,3,3,3,4,5,5]},
+            {result: true, payload: [15,15,28,28,28,29,29,29]},
+            {result: false, payload: [1,1,1,2,3,4,5,5,7,8,9]},
+            {result: false, payload: [1,1,1,2,3,4,5,5,8,9,10]},
+            {result: false, payload: [1,1,1,2,3,4,5,5,8,9,10]},
+            {result: false, payload: [1,1,1,2,2,27,28,29]},
+            {result: false, payload: [1,1,1,2,2,33,33,34,34,34]},
+        ];
+        payloads.forEach(item => {
+            console.log(item.result, this.checkWinPair(item.payload));
+        });
+    };
+
+    checkWin(checkWinInput: string) {
         let hand: number[] = [];
         this.setState({checkWinInput: checkWinInput});
         for (let x = 0; x < checkWinInput.length; x++) {
             hand.push(parseInt(checkWinInput[x]))
         }
         console.time('loop');
+        let win = this.checkWinPair(hand);
         console.log(this.checkWinPair(hand));
+        this.setState({
+            win: win
+        });
         console.timeEnd('loop');
     }
 
@@ -115,7 +139,7 @@ export class Deck extends Component<{}, MyState> {
         if (hand.length > 1) {
             let tmpHand = [...hand];
             for (let x = 0; x < tmpHand.length; x++) {
-                if (tmpHand[x + 1] - tmpHand[x] === 0) {
+                if (tmpHand[x] < 34 && tmpHand[x + 1] - tmpHand[x] === 0) {
                     tmpHand.splice(x, 2);
                     if (this.checkThree(tmpHand)) {return true}
                     if (this.checkSeries(tmpHand)) {return true}
@@ -131,7 +155,7 @@ export class Deck extends Component<{}, MyState> {
         if (hand.length > 2) {
             let tmpHand = [...hand];
             for (let x = 0; x < tmpHand.length; x++) {
-                if (tmpHand[x + 1] - tmpHand[x] === 0 && tmpHand[x + 2] - tmpHand[x + 1] === 0) {
+                if (tmpHand[x] < 34 && tmpHand[x + 1] - tmpHand[x] === 0 && tmpHand[x + 2] - tmpHand[x + 1] === 0) {
                     tmpHand.splice(x, 3);
                     if (this.checkThree(tmpHand)) {return true}
                     if (this.checkSeries(tmpHand)) {return true}
@@ -149,7 +173,9 @@ export class Deck extends Component<{}, MyState> {
         if (hand.length > 2) {
             let tmpHand = [...hand];
             for (let x = 0; x < tmpHand.length; x++) {
-                if (tmpHand[x + 1] - tmpHand[x] === 1 && tmpHand[x + 2] - tmpHand[x + 1] === 1) {
+                if (tmpHand[x] < 25
+                    && (tmpHand[x] !== 7 && tmpHand[x] !== 8 && tmpHand[x] !== 16 && tmpHand[x] !== 17 && tmpHand[x] !== 25 && tmpHand[x] !== 26)
+                    && tmpHand[x + 1] - tmpHand[x] === 1 && tmpHand[x + 2] - tmpHand[x + 1] === 1) {
                     tmpHand.splice(x, 3);
                     if (this.checkThree(tmpHand)) {return true}
                     if (this.checkSeries(tmpHand)) {return true}
@@ -167,7 +193,12 @@ export class Deck extends Component<{}, MyState> {
         if (hand.length > 2) {
             let tmpHand = [...hand];
             for (let x = 0; x < tmpHand.length; x++) {
-                if (tmpHand[x + 2] - tmpHand[x] === 1 && tmpHand[x + 4] - tmpHand[x + 2] === 1) {
+                if (tmpHand[x] < 23
+                    && !((tmpHand[x] > 4 && tmpHand[x] < 9)
+                        || (tmpHand[x] > 13 && tmpHand[x] < 18)
+                        || (tmpHand[x] > 22 && tmpHand[x] < 27))
+                    && tmpHand[x + 2] - tmpHand[x] === 1 && tmpHand[x + 4] - tmpHand[x + 2] === 1) {
+
                     tmpHand.splice(x + 4, 1);
                     tmpHand.splice(x + 2, 1);
                     tmpHand.splice(x, 1);
@@ -182,6 +213,7 @@ export class Deck extends Component<{}, MyState> {
         }
         return false;
     }
+
     // After the component did mount, we set the state each second.
     componentDidMount() {
         this.initial();
@@ -213,11 +245,18 @@ export class Deck extends Component<{}, MyState> {
                         return <Card key={index} card={card} onCardClick={this.handleGraveClick.bind(this, card)} />
                     })}
                 </div>
-
                 <div><button onClick={() => this.initial()}>Reset</button></div>
 
-                <input type="text" onChange={event => this.checkWin(event)}/>
-                <div>{this.state.checkWinInput}</div>
+                {/* check win tester */}
+                <input type="text" onChange={event => this.checkWin(event.target.value)}/>
+                {this.state.win?<span>胡</span>:null}
+                <div>
+                    {Array.from(this.state.checkWinInput).map((strCard, index) => {
+                        let card: number = parseInt(strCard);
+                        return <Card key={index} card={card} onCardClick={this.handleGraveClick.bind(this, card)} />
+                    })}
+                </div>
+
             </div>
         )}
 }
