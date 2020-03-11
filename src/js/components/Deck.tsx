@@ -2,6 +2,7 @@ import React, {ChangeEvent, Component} from 'react';
 import {Card} from "./Card";
 
 interface MyState {
+    init: boolean,
     initialDeck: number[],
     deck: number[],
     grave: number[],
@@ -9,6 +10,21 @@ interface MyState {
     draw: number,
     checkWinInput: string,
     win: boolean,
+    players: IPlayers,
+    turn: number,
+    priority: number,
+}
+
+type IPlayers = IPlayer[];
+
+type IPlayer = {
+    grave: number[],
+    hand: number[],
+    draw: number,
+    flowers: number[],
+    taken: number[],
+    takenHide: number[],
+    playCard: boolean,
 }
 
 
@@ -29,6 +45,7 @@ export class Deck extends Component<{}, MyState> {
             initialDeck.push(x);
         }
         this.state = {
+            init: false,
             initialDeck: initialDeck,
             deck: [],
             grave: [],
@@ -36,6 +53,9 @@ export class Deck extends Component<{}, MyState> {
             draw: 99, //99=無牌
             checkWinInput: '',
             win: false,
+            players: [],
+            turn: 0,
+            priority: 0,
         };
         this.winTester();
     }
@@ -54,46 +74,73 @@ export class Deck extends Component<{}, MyState> {
 
     initial() {
         let deck: number[] = [...this.state.initialDeck];
-        let hand: number[] = [];
 
         this.shuffle(deck);
-        for (let x = 0; x < 16; x++) {
-            hand.push(deck.shift()!);
+
+        let initialPlayers: IPlayers = [];
+        for (let i = 0; i < 4; i++) {
+            let hand: number[] = [];
+            for (let x = 0; x < 16; x++) {
+                hand.push(deck.shift()!);
+            }
+            hand.sort(((a, b) => a - b));
+            let player: IPlayer = {
+                grave: [],
+                hand: hand,
+                draw: 99,
+                flowers: [],
+                taken: [],
+                takenHide: [],
+                playCard: false,
+            };
+            initialPlayers.push(player);
         }
 
-        hand.sort(((a, b) => a - b));
         this.setState( {
             deck: deck,
-            grave: [],
-            hand: hand,
+            players: initialPlayers,
+            init: true
         }, this.drawCard);
     }
 
     drawCard() {
-        console.log('draw');
+        console.log('draw', this.state.turn);
         let deck: number[] = this.state.deck;
-        let draw: number;
-        draw = deck.shift()!;
+        let draw: number = deck.shift()!;
+        let players: IPlayers = [...this.state.players];
+        players[this.state.turn].draw = draw;
         this.setState( {
             deck: deck,
-            draw: draw,
-        });
+            players: players,
+        }, this.check);
     }
 
-    handleCardClick(card: number) {
-        if (card === this.state.draw) {
+    check() {
+        // console.log(this.state.players);
+    }
+
+    handleCardClick(args: number[]) {
+        let [card, owner] = args; //card=點擊的牌 owner=牌的擁有玩家0-3
+        let players = [...this.state.players];
+        let turn = this.state.turn; //誰的回合
+        if (owner !== turn) {return} //不是他的回合的牌打不出來
+        let draw = players[turn].draw;
+        players[turn].draw = 99;
+        if (card === draw) {
             this.setState( (prevState) => ({
-                draw: 99,
+                turn: (prevState.turn + 1) % 4,
+                players: players,
                 grave: [...prevState.grave, card],
             }), this.drawCard);
         } else {
-            let hand = this.state.hand;
+            let hand = players[turn].hand;
             let index = hand.findIndex(element => element === card);
-            hand[index] = this.state.draw;
+            hand[index] = draw;
             hand.sort(((a, b) => a - b));
+            players[turn].hand = hand;
             this.setState((prevState) => ({
-                draw: 99,
-                hand: hand,
+                turn: (prevState.turn + 1) % 4,
+                players: players,
                 grave: [...prevState.grave, card],
             }), this.drawCard);
         }
@@ -223,21 +270,69 @@ export class Deck extends Component<{}, MyState> {
     render() {
         return (
             <div>
-                <div>手牌</div>
-                <div>
-                    {this.state.hand.map((card, index) => {
-                        return <Card key={index} card={card} onCardClick={this.handleCardClick.bind(this, card)} />
-                    })}
-                </div>
-                <div>進牌</div>
-                {
-                    this.state.draw < 99 ?
+                {this.state.init?
+                    <div>
+                        <div>玩家0手牌</div>
                         <div>
-                            <Card card={this.state.draw} onCardClick={this.handleCardClick.bind(this, this.state.draw)} />
+                            {this.state.players[0].hand.map((card, index) => {
+                                return <Card key={index} card={card} onCardClick={this.handleCardClick.bind(this, [card, 0])} />
+                            })}
                         </div>
-                        :
-                        <div></div>
-                }
+                        <div>進牌</div>
+                        {
+                            this.state.players[0].draw < 99 ?
+                                <div>
+                                    <Card card={this.state.players[0].draw} onCardClick={this.handleCardClick.bind(this, [this.state.players[0].draw, 0])} />
+                                </div>
+                                : <div></div>
+                        }
+
+                        <div>玩家1手牌</div>
+                        <div>
+                            {this.state.players[1].hand.map((card, index) => {
+                                return <Card key={index} card={card} onCardClick={this.handleCardClick.bind(this, [card, 1])} />
+                            })}
+                        </div>
+                        <div>進牌</div>
+                        {
+                            this.state.players[1].draw < 99 ?
+                                <div>
+                                    <Card card={this.state.players[1].draw} onCardClick={this.handleCardClick.bind(this, [this.state.players[1].draw, 1])} />
+                                </div>
+                                : <div></div>
+                        }
+
+                        <div>玩家2手牌</div>
+                        <div>
+                            {this.state.players[2].hand.map((card, index) => {
+                                return <Card key={index} card={card} onCardClick={this.handleCardClick.bind(this, [card, 2])} />
+                            })}
+                        </div>
+                        <div>進牌</div>
+                        {
+                            this.state.players[2].draw < 99 ?
+                                <div>
+                                    <Card card={this.state.players[2].draw} onCardClick={this.handleCardClick.bind(this, [this.state.players[2].draw, 2])} />
+                                </div>
+                                : <div></div>
+                        }
+
+                        <div>玩家3手牌</div>
+                        <div>
+                            {this.state.players[3].hand.map((card, index) => {
+                                return <Card key={index} card={card} onCardClick={this.handleCardClick.bind(this, [card, 3])} />
+                            })}
+                        </div>
+                        <div>進牌</div>
+                        {
+                            this.state.players[3].draw < 99 ?
+                                <div>
+                                    <Card card={this.state.players[3].draw} onCardClick={this.handleCardClick.bind(this, [this.state.players[3].draw, 3])} />
+                                </div>
+                                : <div></div>
+                        }
+                    </div>
+                    :null}
 
                 <div>墳場</div>
                 <div>
